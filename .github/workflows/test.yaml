@@ -12,41 +12,55 @@ env:
   CLUSTER_NAME: iris-cluster
   GKE_ZONE: us-central1-a
 
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+    # Step 1: Checkout the repo
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    # Step 2: Authenticate with GCP using service account key (from GitHub secret)
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
+    # Step 3: Install Google Cloud SDK and kubectl
     - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
       with:
         project_id: ${{ env.PROJECT_ID }}
 
+    # Step 4: Install the GKE authentication plugin (critical for new clusters)
+    - name: Install GKE auth plugin
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y google-cloud-sdk-gke-gcloud-auth-plugin
+        echo "export USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+
+    # Step 5: Configure Docker for Artifact Registry
     - name: Configure Docker for Artifact Registry
       run: |
         gcloud auth configure-docker "$GAR_LOCATION-docker.pkg.dev" --quiet
 
+    # Step 6: Build Docker image for the API
     - name: Build Docker image
       run: |
         docker build -t $GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:${{ github.sha }} .
 
+    # Step 7: Push the built image to Artifact Registry
     - name: Push image to Artifact Registry
       run: |
         docker push $GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:${{ github.sha }}
 
+    # Step 8: Connect to GKE cluster
     - name: Get GKE credentials
       run: |
-        gcloud container clusters get-credentials $CLUSTER_NAME --zone $GKE_ZONE
+        gcloud container clusters get-credentials $CLUSTER_NAME --zone $GKE_ZONE --project $PROJECT_ID
 
+    # Step 9: Deploy the container image to GKE
     - name: Deploy to GKE
       run: |
         kubectl set image deployment/iris-api iris-api=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:${{ github.sha }} || \
