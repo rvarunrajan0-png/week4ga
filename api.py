@@ -1,18 +1,22 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 import joblib
-import pandas as pd
 
 app = FastAPI()
 model = joblib.load("models/model_v1.joblib")
+
+class Features(BaseModel):
+    features: list[float]
 
 @app.get("/")
 def root():
     return {"message": "IRIS API is live!"}
 
 @app.post("/predict")
-def predict(features: list[float]):
-    prediction = model.predict([features])
+def predict(data: Features):
+    prediction = model.predict([data.features])
     return {"prediction": int(prediction[0])}
+
 
 if __name__ == "__main__":
     import uvicorn
