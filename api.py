@@ -15,7 +15,8 @@ def root():
 @app.post("/predict")
 def predict(data: Features):
     prediction = model.predict([data.features])
-    return {"prediction": int(prediction[0])}
+    return {"prediction": prediction[0]}
+
 
 
 if __name__ == "__main__":
