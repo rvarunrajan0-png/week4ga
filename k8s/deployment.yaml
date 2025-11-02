@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: iris-api
-        image: us-central1-docker.pkg.dev/dynamic-net-473205-u8/iris-api/iris-api:latest
+        image: asia-south1-docker.pkg.dev/iris-mlops-arun-2025/iris-api/iris-api:latest
         ports:
         - containerPort: 8080
