@@ -2,7 +2,7 @@ name: CD Pipeline - Build and Deploy IRIS API
 
 on:
   push:
-    branches: [ main ]  # Deploy only when code reaches main
+    branches: [ main ] 
 
 env:
   PROJECT_ID: iris-mlops-arun-2025
