@@ -21,21 +21,22 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Step 2: Authenticate with GCP using service account key
+    # Step 2: Authenticate with GCP using service account key (from GitHub secret)
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    # Step 3: Set up Google Cloud SDK
     - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
       with:
         project_id: ${{ env.PROJECT_ID }}
 
-    # Step 4: Install GKE auth plugin (for kubectl authentication)
     - name: Install GKE auth plugin
       run: |
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
+        sudo apt-get install -y apt-transport-https ca-certificates gnupg curl
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
         sudo apt-get update
         sudo apt-get install -y google-cloud-sdk-gke-gcloud-auth-plugin
         echo "export USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
@@ -60,7 +61,7 @@ jobs:
       run: |
         gcloud container clusters get-credentials $CLUSTER_NAME --region $GKE_REGION --project $PROJECT_ID
 
-    # Step 9: Deploy to GKE (update image or apply YAML if missing)
+    # Step 9: Deploy the container image to GKE
     - name: Deploy to GKE
       run: |
         kubectl set image deployment/iris-api iris-api=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:${{ github.sha }} || \
