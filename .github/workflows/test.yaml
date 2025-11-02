@@ -5,12 +5,13 @@ on:
     branches: [ main ]  # Deploy only when code reaches main
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
+  PROJECT_ID: dynamic-net-473205-u8
+  GAR_LOCATION: us-central1
   REPO_NAME: iris-api
   IMAGE_NAME: iris-api
-  CLUSTER_NAME: ${{ secrets.GKE_CLUSTER }}
-  GKE_ZONE: ${{ secrets.GKE_ZONE }}
+  CLUSTER_NAME: iris-cluster
+  GKE_ZONE: us-central1-a
+
 
 jobs:
   deploy:
