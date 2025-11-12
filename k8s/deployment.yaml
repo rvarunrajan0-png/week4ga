@@ -2,8 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: iris-api
+  labels:
+    app: iris-api
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: iris-api
@@ -17,3 +19,22 @@ spec:
         image: asia-south1-docker.pkg.dev/iris-mlops-arun-2025/iris-api/iris-api:latest
         ports:
         - containerPort: 8080
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 10

@@ -2,7 +2,7 @@ name: CD Pipeline - Build and Deploy IRIS API
 
 on:
   push:
-    branches: [ main ] 
+    branches: [ main ]  # Deploy only when code reaches main
 
 env:
   PROJECT_ID: iris-mlops-arun-2025
@@ -21,17 +21,19 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Step 2: Authenticate with GCP using service account key (from GitHub secret)
+    # Step 2: Authenticate with GCP using service account key
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
+    # Step 3: Setup Google Cloud SDK
     - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
       with:
         project_id: ${{ env.PROJECT_ID }}
 
+    # Step 4: Install GKE auth plugin
     - name: Install GKE auth plugin
       run: |
         echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
@@ -51,7 +53,7 @@ jobs:
       run: |
         docker build -t $GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:${{ github.sha }} .
 
-    # Step 7: Push the built image to Artifact Registry
+    # Step 7: Push the image to Artifact Registry
     - name: Push image to Artifact Registry
       run: |
         docker push $GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:${{ github.sha }}
@@ -61,8 +63,28 @@ jobs:
       run: |
         gcloud container clusters get-credentials $CLUSTER_NAME --region $GKE_REGION --project $PROJECT_ID
 
-    # Step 9: Deploy the container image to GKE
+    # Step 9: Deploy to GKE (apply deployment, service, and HPA)
     - name: Deploy to GKE
       run: |
-        kubectl set image deployment/iris-api iris-api=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:${{ github.sha }} || \
-        kubectl apply -f k8s/
+        # Apply Kubernetes manifests
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml
+        kubectl apply -f k8s/hpa.yaml
+
+        # Update deployment image to latest commit
+        kubectl set image deployment/iris-api iris-api=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:${{ github.sha }}
+
+        # Wait until rollout finishes
+        kubectl rollout status deployment/iris-api --timeout=120s
+
+    # Step 10: Verify deployed resources
+    - name: Verify Deployment
+      run: |
+        echo "=== Current Deployments ==="
+        kubectl get deployments
+        echo "=== Current Pods ==="
+        kubectl get pods -o wide
+        echo "=== Current Services ==="
+        kubectl get svc
+        echo "=== Current HPA ==="
+        kubectl get hpa
