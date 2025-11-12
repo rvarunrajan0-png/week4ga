@@ -14,6 +14,7 @@ def root():
 
 @app.post("/predict")
 def predict(data: Features):
+    #predict
     prediction = model.predict([data.features])
     return {"prediction": prediction[0]}
 
